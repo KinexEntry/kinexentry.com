@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="512" height="512" role="img" aria-label="Kinex Entry">
+  <title>Kinex Entry</title>
+  <!--
+    The Kinex mark, shared with Kinex Judging so the two products read as one
+    family. A K with its arms cut away from the stem: the entry leaves a
+    contestant's phone and arrives at the secretary's desk — a signal crossing
+    a space.
+
+    Copper stem #C4622B, cream arms #F6F1E7. Stroke width 16, round caps.
+    The same geometry is in apps/console/components/logo.tsx and
+    apps/mobile/scripts/mark.mjs — change all three together, and keep them in
+    step with the Judging System's copy of the mark.
+  -->
+  <path d="M22 16 V84" stroke="#C4622B" stroke-width="16" stroke-linecap="round" fill="none"/>
+  <path d="M44 50 L78 18" stroke="#F6F1E7" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <path d="M44 50 L78 82" stroke="#F6F1E7" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>
