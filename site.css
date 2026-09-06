@@ -116,3 +116,30 @@ footer .fine { margin-top: 24px; font-size: 12.5px; }
   .top { flex-direction: column; align-items: flex-start; }
   .hero { padding-top: 40px; }
 }
+
+/* ── photographs ─────────────────────────────────────────────────────── */
+/*
+ * A photo sits behind the hero and the "working a rodeo" band, darkened so
+ * the type stays legible. The picture is set inline on the element as
+ * --photo, so swapping in Kinex Entry's own shots is a one-attribute change.
+ */
+.hero.photo, .band {
+  position: relative; isolation: isolate; border-radius: var(--radius);
+  overflow: hidden; padding: 72px 28px 56px; margin-top: 8px;
+}
+.hero.photo::before, .band::before {
+  content: ""; position: absolute; inset: 0; z-index: -2;
+  background: var(--photo) center / cover no-repeat;
+}
+.hero.photo::after, .band::after {
+  content: ""; position: absolute; inset: 0; z-index: -1;
+  background:
+    linear-gradient(90deg, rgba(14,13,12,.92) 0%, rgba(14,13,12,.78) 55%, rgba(14,13,12,.45) 100%),
+    linear-gradient(180deg, rgba(14,13,12,.2), rgba(14,13,12,.75));
+}
+.hero.photo .lede { color: #d9d2c6; }
+.band { margin-top: 48px; padding: 56px 28px; }
+.band p { color: #d9d2c6 !important; }
+@media (max-width: 640px) {
+  .hero.photo, .band { padding: 48px 20px 40px; border-radius: 0; margin-left: -22px; margin-right: -22px; }
+}
