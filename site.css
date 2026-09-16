@@ -143,3 +143,11 @@ footer .fine { margin-top: 24px; font-size: 12.5px; }
 @media (max-width: 640px) {
   .hero.photo, .band { padding: 48px 20px 40px; border-radius: 0; margin-left: -22px; margin-right: -22px; }
 }
+
+/* The two sign-in doors: copper boxes at the end of the nav. */
+nav a.navbtn {
+  display: inline-block; padding: 7px 14px; border-radius: 8px;
+  background: var(--copper); color: #fff; font-weight: 700; line-height: 1;
+}
+nav a.navbtn:hover { color: #fff; filter: brightness(1.08); text-decoration: none; }
+nav { align-items: center; row-gap: 10px; }
