@@ -113,8 +113,20 @@ footer a { color: var(--muted); }
 footer .fine { margin-top: 24px; font-size: 12.5px; }
 
 @media (max-width: 640px) {
-  .top { flex-direction: column; align-items: flex-start; }
   .hero { padding-top: 40px; }
+  /* The header on a phone: the logo on its own line, the four pages as a row of
+     pills, and the two copper doors side by side under them. */
+  .top { flex-wrap: wrap; row-gap: 14px; padding: 14px 0; }
+  nav { width: 100%; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  nav a:not(.navbtn) {
+    text-align: center; padding: 9px 4px; border: 1px solid var(--line); border-radius: 10px;
+    background: var(--ink-2); font-size: 13px; color: var(--muted);
+  }
+  nav a:not(.navbtn)[aria-current] { border-color: var(--copper); color: var(--cream); background: var(--copper-soft); }
+  nav a.navbtn { grid-column: 1 / 3; text-align: center; padding: 12px 10px; font-size: 14px; }
+  nav .navmenu { grid-column: 3 / 5; }
+  nav .navmenu summary.navbtn { display: block; text-align: center; padding: 12px 10px; font-size: 14px; }
+  nav .navmenu .menu { left: auto; right: 0; min-width: 100%; }
 }
 
 /* ── photographs ─────────────────────────────────────────────────────── */
@@ -192,3 +204,11 @@ nav { align-items: center; row-gap: 10px; }
 .contact .trap { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
 .contact .contact-status { font-size: 14px; color: #d9d2c6; align-self: center; }
 @media (max-width: 640px) { .contact .fields { grid-template-columns: 1fr; } }
+
+/* The phone number sits under Contact Us, on its own line. */
+.band .callus { margin: 14px 0 0; font-size: 15px; color: #d9d2c6 !important; }
+.band .callus a { font-weight: 700; }
+/* On a phone the Sign In door fills its half of the row, like Create An Account. */
+@media (max-width: 640px) {
+  nav .navmenu summary.navbtn { display: block; width: 100%; text-align: center; padding: 12px 10px; font-size: 14px; }
+}
