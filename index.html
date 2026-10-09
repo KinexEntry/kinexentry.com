@@ -167,6 +167,25 @@
     </div>
   </footer>
 
+  <!-- Enter an event here: the chat in the corner. Everything it does is in chat.js. -->
+  <div class="kchat" id="kchat">
+    <button type="button" class="kchat-bubble" id="kchat-open" aria-controls="kchat-panel" aria-expanded="false">
+      <span class="kchat-dot"></span>Enter an event here
+    </button>
+    <section class="kchat-panel" id="kchat-panel" hidden aria-label="Enter an event">
+      <header class="kchat-head">
+        <span class="kchat-mark">K</span>
+        <span><strong>Kinex Entry</strong><small>Enter an event here</small></span>
+        <button type="button" class="kchat-close" id="kchat-close" aria-label="Close">×</button>
+      </header>
+      <div class="kchat-log" id="kchat-log" aria-live="polite"></div>
+      <form class="kchat-form" id="kchat-form" autocomplete="off">
+        <input id="kchat-input" placeholder="Type here" aria-label="Your reply">
+        <button type="submit">Send</button>
+      </form>
+    </section>
+  </div>
+  <script src="chat.js"></script>
   <script>
     // Contact Us: the button opens the form; sending posts it to the API, which emails the office.
     (function () {
