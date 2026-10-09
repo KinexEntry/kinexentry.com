@@ -247,6 +247,6 @@
     var t = input.value.trim(); if (!t || !onText) return;
     input.value = ""; echo(t); onText(t);
   });
-  open.addEventListener("click", function () { panel.hidden = false; open.setAttribute("aria-expanded", "true"); open.hidden = true; start(); input.focus(); });
-  closeBtn.addEventListener("click", function () { panel.hidden = true; open.hidden = false; open.setAttribute("aria-expanded", "false"); });
+  open.addEventListener("click", function () { panel.hidden = false; open.setAttribute("aria-expanded", "true"); open.hidden = true; document.body.classList.add("kchat-open"); start(); input.focus(); });
+  closeBtn.addEventListener("click", function () { panel.hidden = true; open.hidden = false; open.setAttribute("aria-expanded", "false"); document.body.classList.remove("kchat-open"); });
 })();

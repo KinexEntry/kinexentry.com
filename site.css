@@ -249,4 +249,21 @@ nav { align-items: center; row-gap: 10px; }
 .kchat-form input:focus { outline: 2px solid var(--copper); outline-offset: 1px; }
 .kchat-form button { font: 700 14px Inter, Arial, sans-serif; background: var(--copper); color: #fff; border: none; border-radius: 10px; padding: 10px 14px; cursor: pointer; }
 .kchat-form button:disabled, .kchat-form input:disabled { opacity: .5; cursor: default; }
-@media (max-width: 640px) { .kchat { right: 12px; bottom: 12px; } .kchat-panel { width: calc(100vw - 24px); height: calc(100vh - 24px); } }
+/* Phones: the panel is the whole screen, laid out for a thumb and a keyboard. */
+@media (max-width: 640px) {
+  .kchat { right: 12px; bottom: 12px; }
+  .kchat-panel {
+    position: fixed; inset: 0; width: auto; height: auto; max-height: none; border-radius: 0; border: none;
+    padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);
+  }
+  .kchat-head { padding: 14px 16px; }
+  .kchat-close { font-size: 28px; padding: 4px 10px; }
+  .kchat-log { padding: 14px; gap: 12px; -webkit-overflow-scrolling: touch; }
+  .kchat-msg { max-width: 92%; font-size: 15px; }
+  .kchat-chip { padding: 9px 14px; font-size: 14px; }
+  .kchat-tile { padding: 15px 16px; font-size: 16px; }
+  .kchat-form { padding: 10px 12px; }
+  .kchat-form input { font-size: 16px; padding: 12px 14px; } /* 16px keeps iOS from zooming the page when the field is tapped */
+  .kchat-form button { padding: 12px 16px; font-size: 15px; }
+  body.kchat-open { overflow: hidden; }
+}
