@@ -123,9 +123,13 @@ footer .fine { margin-top: 24px; font-size: 12.5px; }
     background: var(--ink-2); font-size: 13px; color: var(--muted);
   }
   nav a:not(.navbtn)[aria-current] { border-color: var(--copper); color: var(--cream); background: var(--copper-soft); }
-  nav a.navbtn { grid-column: 1 / 3; text-align: center; padding: 12px 10px; font-size: 14px; }
-  nav .navmenu { grid-column: 3 / 5; }
-  nav .navmenu summary.navbtn { display: block; text-align: center; padding: 12px 10px; font-size: 14px; }
+  /* Create An Account and Sign In: one fixed height, so the two doors match exactly. */
+  .top nav a.navbtn, .top nav .navmenu summary.navbtn {
+    display: flex; align-items: center; justify-content: center; box-sizing: border-box;
+    height: 46px; padding: 0 10px; margin: 0; font-size: 14px; line-height: 1; border-radius: 8px; width: 100%;
+  }
+  nav a.navbtn { grid-column: 1 / 3; }
+  nav .navmenu { grid-column: 3 / 5; display: block; }
   nav .navmenu .menu { left: auto; right: 0; min-width: 100%; }
 }
 
