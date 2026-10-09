@@ -253,7 +253,7 @@ nav { align-items: center; row-gap: 10px; }
 @media (max-width: 640px) {
   .kchat { right: 12px; bottom: 12px; }
   .kchat-panel {
-    position: fixed; inset: 0; width: auto; height: auto; max-height: none; border-radius: 0; border: none;
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: auto; height: auto; max-height: none; border-radius: 0; border: none; box-sizing: border-box;
     padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);
   }
   .kchat-head { padding: 14px 16px; }
@@ -265,5 +265,5 @@ nav { align-items: center; row-gap: 10px; }
   .kchat-form { padding: 10px 12px; }
   .kchat-form input { font-size: 16px; padding: 12px 14px; } /* 16px keeps iOS from zooming the page when the field is tapped */
   .kchat-form button { padding: 12px 16px; font-size: 15px; }
-  body.kchat-open { overflow: hidden; }
+  body.kchat-open { overflow: hidden; position: fixed; width: 100%; } /* position: fixed also stops iOS Safari scrolling the page under the keyboard */
 }

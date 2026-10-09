@@ -50,6 +50,20 @@
   function lockTiles() { log.querySelectorAll(".kchat-tile").forEach(function (t) { t.disabled = true; }); }
   function finish(row) { row.dataset.done = "1"; row.querySelectorAll("button").forEach(function (b) { b.disabled = true; }); }
   function scrollDown() { log.scrollTop = log.scrollHeight; }
+  // On a phone the panel is the whole screen. When the keyboard opens, the
+  // visual viewport shrinks; size the panel to it so the header, the messages
+  // and the text field all stay on screen instead of the top sliding off.
+  var vv = window.visualViewport;
+  var pageY = 0; // where the page was scrolled when the chat opened, so closing puts it back
+  function fitPanel() {
+    if (panel.hidden) return;
+    if (window.innerWidth > 640 || !vv) { panel.style.height = ""; panel.style.top = ""; return; }
+    panel.style.height = Math.round(vv.height) + "px";
+    panel.style.top = Math.round(vv.offsetTop) + "px";
+    scrollDown();
+  }
+  if (vv) { vv.addEventListener("resize", fitPanel); vv.addEventListener("scroll", fitPanel); }
+  window.addEventListener("resize", fitPanel);
   function expectText(placeholder, fn) { onText = fn; input.placeholder = placeholder; input.disabled = false; input.focus(); }
   function noText() { onText = null; input.placeholder = "Tap an option above"; }
 
@@ -247,6 +261,6 @@
     var t = input.value.trim(); if (!t || !onText) return;
     input.value = ""; echo(t); onText(t);
   });
-  open.addEventListener("click", function () { panel.hidden = false; open.setAttribute("aria-expanded", "true"); open.hidden = true; document.body.classList.add("kchat-open"); start(); input.focus(); });
-  closeBtn.addEventListener("click", function () { panel.hidden = true; open.hidden = false; open.setAttribute("aria-expanded", "false"); document.body.classList.remove("kchat-open"); });
+  open.addEventListener("click", function () { panel.hidden = false; open.setAttribute("aria-expanded", "true"); open.hidden = true; pageY = window.scrollY; document.body.classList.add("kchat-open"); document.body.style.top = -pageY + "px"; start(); fitPanel(); input.focus(); });
+  closeBtn.addEventListener("click", function () { panel.hidden = true; open.hidden = false; open.setAttribute("aria-expanded", "false"); document.body.classList.remove("kchat-open"); document.body.style.top = ""; panel.style.height = ""; panel.style.top = ""; window.scrollTo(0, pageY); });
 })();
