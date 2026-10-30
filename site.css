@@ -271,3 +271,8 @@ nav { align-items: center; row-gap: 10px; }
   .kchat-form button { padding: 12px 16px; font-size: 15px; }
   body.kchat-open { overflow: hidden; position: fixed; width: 100%; } /* position: fixed also stops iOS Safari scrolling the page under the keyboard */
 }
+
+/* Dally, the help hand, sits bottom-left so the entry chat keeps the right corner. No voice yet, so no speaker button. */
+.hw-root .hw-ib[aria-label*="voice"] { display: none; }
+.hw-root .hw-launch { font-family: Inter, "Helvetica Neue", Helvetica, Arial, sans-serif; }
+@media (max-width: 640px) { .hw-root.hw-left { left: 12px; bottom: 12px; } }
