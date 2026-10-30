@@ -8,6 +8,7 @@
   <link rel="icon" href="assets/favicon.png">
   <link rel="apple-touch-icon" href="assets/icon-512.png">
   <link rel="stylesheet" href="site.css?v=20261008c">
+  <link rel="stylesheet" href="/josie/josie-site.css?v=20261030">
 </head>
 <body>
   <header class="wrap top">
@@ -167,25 +168,40 @@
     </div>
   </footer>
 
-  <!-- Enter an event here: the chat in the corner. Everything it does is in chat.js. -->
+  <!-- Josie: the help hand in the corner. She enters events (the same routes and 20-minute pass as before, in /josie/josie-site-chat.js),
+       answers questions through the API's help route, and reads a line aloud when asked. chat.js stays on the server only for rollback. -->
   <div class="kchat" id="kchat">
-    <button type="button" class="kchat-bubble" id="kchat-open" aria-controls="kchat-panel" aria-expanded="false">
-      <span class="kchat-dot"></span>Enter an event here
+    <button type="button" class="kchat-bubble josie" id="kchat-open" aria-controls="kchat-panel" aria-expanded="false">
+      <img class="kchat-face-sm" data-josie-avatar alt="" width="44" height="44">
+      <span class="kchat-bubble-words">Ask Josie<small>Enter an event · Get help</small></span>
     </button>
-    <section class="kchat-panel" id="kchat-panel" hidden aria-label="Enter an event">
+    <section class="kchat-panel" id="kchat-panel" hidden aria-label="Josie, Kinex Entry helper">
       <header class="kchat-head">
-        <span class="kchat-mark">K</span>
-        <span><strong>Kinex Entry</strong><small>Enter an event here</small></span>
-        <button type="button" class="kchat-close" id="kchat-close" aria-label="Close">×</button>
+        <img class="kchat-face" id="kchat-face" alt="Josie" width="58" height="58">
+        <span class="kchat-who"><strong>Josie</strong><small>Kinex Entry helper · enter events, get help</small></span>
+        <span class="kchat-tools">
+          <button type="button" class="kchat-ib" id="kchat-menu" aria-label="Show Josie's options" title="Options">☰</button>
+          <button type="button" class="kchat-ib" id="kchat-voice" aria-pressed="false" aria-label="Voice is off. Tap to have Josie read new messages aloud">🔇</button>
+          <button type="button" class="kchat-close" id="kchat-close" aria-label="Close">×</button>
+        </span>
       </header>
       <div class="kchat-log" id="kchat-log" aria-live="polite"></div>
       <form class="kchat-form" id="kchat-form" autocomplete="off">
-        <input id="kchat-input" placeholder="Type here" aria-label="Your reply">
+        <input id="kchat-input" placeholder="Type here" aria-label="Your reply" enterkeyhint="send">
         <button type="submit">Send</button>
       </form>
     </section>
   </div>
-  <script src="chat.js?v=20261008c"></script>
+  <script>
+    // Josie's settings. The help and voice routes live on the API; the rule-book route is switched on when the library ships.
+    (function () {
+      var api = /^(localhost|127.0.0.1)$/.test(location.hostname) ? "http://localhost:8787" : "https://api.kinexentry.com";
+      window.JOSIE_SITE = { api: api, assetBase: "/josie/", chatUrl: api + "/v1/help/chat", ttsUrl: api + "/v1/help/tts", rulesUrl: null, hat: "auto" };
+    })();
+  </script>
+  <script src="/josie/josie-hat-season.js?v=20261030"></script>
+  <script src="/josie/kinexentry-helper.config.js?v=20261030"></script>
+  <script src="/josie/josie-site-chat.js?v=20261030"></script>
   <script>
     // Contact Us: the button opens the form; sending posts it to the API, which emails the office.
     (function () {
@@ -218,7 +234,5 @@
       });
     })();
   </script>
-  <script src="dally/helper-widget.js" defer></script>
-  <script src="dally/config.js" defer></script>
 </body>
 </html>

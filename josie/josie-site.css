@@ -1,0 +1,42 @@
+/*
+ * Josie on kinexentry.com: loads AFTER site.css. It reuses every .kchat-* rule from site.css (colors, chips,
+ * tiles, the phone full-screen panel, the body lock) and only adds Josie's face, avatars, voice and menu buttons.
+ */
+.kchat-bubble.josie { padding: 6px 18px 6px 6px; gap: 10px; }
+.kchat-bubble.josie .kchat-face-sm { width: 44px; height: 44px; border-radius: 50%; background: var(--cream, #f6f1e7); border: 2px solid #fff; object-fit: cover; object-position: center 20%; }
+.kchat-bubble.josie .kchat-bubble-words { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.15; text-align: left; }
+.kchat-bubble.josie .kchat-bubble-words small { font-weight: 600; font-size: 12px; opacity: .9; }
+@media (prefers-reduced-motion: no-preference) {
+  .kchat-bubble.josie { animation: josie-rise .55s cubic-bezier(.2,1.4,.4,1) both; }
+  @keyframes josie-rise { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+}
+.kchat-head .kchat-face { width: 58px; height: 58px; flex: none; border-radius: 50%; background: var(--cream, #f6f1e7); object-fit: cover; object-position: center 12%; border: 2px solid var(--copper, #c4622b); }
+.kchat-head .kchat-who { min-width: 0; }
+.kchat-head .kchat-who small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kchat-tools { margin-left: auto; display: flex; align-items: center; gap: 2px; }
+.kchat-tools .kchat-close { margin-left: 0; }
+.kchat-ib { background: none; border: none; color: var(--muted, #a2988a); font-size: 18px; line-height: 1; padding: 6px 8px; cursor: pointer; border-radius: 8px; }
+.kchat-ib:hover, .kchat-ib:focus-visible { color: var(--cream, #f6f1e7); background: rgba(255,255,255,.06); }
+.kchat-ib[aria-pressed="true"] { color: var(--copper, #c4622b); }
+.kchat-row { display: flex; align-items: flex-end; gap: 7px; align-self: flex-start; max-width: 94%; }
+.kchat-row .kchat-msg { max-width: none; position: relative; padding-right: 34px; }
+.kchat-av { width: 28px; height: 28px; flex: none; border-radius: 50%; background: var(--cream, #f6f1e7); object-fit: cover; object-position: center 15%; }
+.kchat-hear { position: absolute; right: 4px; top: 4px; background: none; border: none; font-size: 14px; line-height: 1; padding: 4px; cursor: pointer; opacity: .55; border-radius: 6px; }
+.kchat-hear:hover, .kchat-hear:focus-visible { opacity: 1; background: rgba(255,255,255,.08); }
+.kchat-hear.playing { opacity: 1; animation: josie-pulse 1s ease-in-out infinite; }
+@keyframes josie-pulse { 50% { transform: scale(1.18); } }
+.kchat-cites { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+.kchat-cite { font-size: 11.5px; line-height: 1.3; padding: 3px 8px; border-radius: 999px; background: #2f2a25; border: 1px solid #4a4038; color: var(--muted, #a2988a); }
+.kchat-typing { display: inline-flex; gap: 4px; padding: 12px 14px !important; }
+.kchat-typing i { width: 7px; height: 7px; border-radius: 50%; background: var(--muted, #a2988a); animation: josie-dot 1s infinite; }
+.kchat-typing i:nth-child(2) { animation-delay: .15s; } .kchat-typing i:nth-child(3) { animation-delay: .3s; }
+@keyframes josie-dot { 0%, 60%, 100% { opacity: .3; transform: none; } 30% { opacity: 1; transform: translateY(-3px); } }
+.kchat-msg .warn, .kchat-msg .good, .kchat-msg .bad { white-space: pre-line; }
+@media (max-width: 640px) {
+  .kchat-bubble.josie { padding: 5px 16px 5px 5px; }
+  .kchat-head .kchat-face { width: 52px; height: 52px; }
+  .kchat-ib { font-size: 22px; padding: 8px 10px; }
+  .kchat-hear { font-size: 16px; padding: 6px; }
+  .kchat-row { max-width: 98%; }
+}
+@media (prefers-reduced-motion: reduce) { .kchat-hear.playing, .kchat-typing i { animation: none; } }
