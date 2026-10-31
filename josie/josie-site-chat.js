@@ -79,10 +79,15 @@
   }
   function stopAudio() { if (audio) { audio.pause(); audio = null; } if (audioUrl) { URL.revokeObjectURL(audioUrl); audioUrl = null; } stopFlap(); log.querySelectorAll(".kchat-hear.playing").forEach(function (b) { b.classList.remove("playing"); }); }
   function speakText(el) { var c = el.cloneNode(true); c.querySelectorAll(".kchat-hear, .kchat-cites").forEach(function (x) { x.remove(); }); return c.textContent.replace(/[✕⚠•]/g, "").replace(/\s+/g, " ").trim(); }
+  // Only the newest request may start audio: an answer fetched a moment ago must not start on top of the line now playing.
+  var playGen = 0;
   function play(el, btn) {
     stopAudio();
+    var gen = ++playGen;
     var clip = el.getAttribute("data-clip");
     var go = function (src) {
+      if (gen !== playGen) { if (src && src.indexOf("blob:") === 0) URL.revokeObjectURL(src); return Promise.resolve(); }
+      stopAudio();
       audio = new Audio(src); if (btn) btn.classList.add("playing");
       audio.onplaying = function () { flap((audio.duration || 4) * 1000); };
       audio.onended = audio.onerror = function () { stopAudio(); };
@@ -92,7 +97,7 @@
     if (!CFG.ttsUrl) return Promise.resolve();
     return fetch(CFG.ttsUrl, { method: "POST", headers: { "content-type": "application/json" }, credentials: "include", body: JSON.stringify({ sessionId: sessionId, text: forTts(speakText(el)) }) })
       .then(function (r) { if (!r.ok) throw new Error("tts " + r.status); return r.blob(); })
-      .then(function (b) { audioUrl = URL.createObjectURL(b); return go(audioUrl); })
+      .then(function (b) { if (gen !== playGen) return; audioUrl = URL.createObjectURL(b); return go(audioUrl); })
       .catch(function () { stopAudio(); });
   }
   function addHear(d) {
@@ -436,7 +441,7 @@
     }).then(function (fin) {
       if (fin && fin.error) { dots.remove(); var a = scripted(q); say(plain(a.text), null, { pose: a.pose }); afterHelp(a); return; }
       if (!d) { dots.remove(); d = say("Sorry, I lost my train of thought. Try that again?", null, { pose: "sorry" }); }
-      else { addHear(d); if (voiceOn) play(d, d.querySelector(".kchat-hear")); hold(fin.pose || "idle"); }
+      else { if (fin.text) { txt = fin.text; d.textContent = plain(txt); } addHear(d); if (voiceOn) play(d, d.querySelector(".kchat-hear")); hold(fin.pose || "idle"); }
       helpHistory.push({ role: "user", content: q }, { role: "assistant", content: txt });
       afterHelp(fin);
     }).catch(function () { dots.remove(); var a = scripted(q); say(plain(a.text), null, { pose: a.pose }); afterHelp(a); });
