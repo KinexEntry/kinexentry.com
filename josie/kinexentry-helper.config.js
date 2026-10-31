@@ -23,7 +23,7 @@ window.KINEX_HELPER_CONFIG = {
   character: { type: 'sprites',
     set: (typeof resolveJosieHat === 'function') ? resolveJosieHat(JOSIE_HAT) : (JOSIE_HAT === 'straw' ? 'straw' : 'felt'),
     sets: { felt: josiePoses('felt'), straw: josiePoses('straw') } },
-  greeting: { text: "Howdy! I'm Josie, your Kinex Entry helper. What can I help you with today?", audio: 'audio/greeting.mp3' },
+  greeting: { text: "Howdy! I'm Josie, your Kinex Entry helper. I can enter you in an event any time of day, or help you with the app.", audio: 'audio/greeting.mp3' },
   quickReplies: ["My payment didn't go through", "I can't sign in", "It says I'm not eligible", "Withdraw / refund", "Where are my results?"],
   mode: 'scripted',
   scripted: [

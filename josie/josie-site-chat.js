@@ -26,6 +26,7 @@
   var CFG = window.JOSIE_SITE || {};
   var API = CFG.api || (/^(localhost|127.0.0.1)$/.test(location.hostname) ? "http://localhost:8787" : "https://api.kinexentry.com");
   var BASE = CFG.assetBase || "/josie/";
+  var CLIP_V = "20261031"; // bump when the pre-made clips are re-rendered, so browsers fetch the new voice
   var HELP = window.KINEX_HELPER_CONFIG || null;
   var open = document.getElementById("kchat-open");
   var panel = document.getElementById("kchat-panel");
@@ -93,7 +94,7 @@
       audio.onended = audio.onerror = function () { stopAudio(); };
       return audio.play().catch(function () { stopAudio(); });
     };
-    if (clip) return go(BASE + clip);
+    if (clip) return go(BASE + clip + "?v=" + CLIP_V);
     if (!CFG.ttsUrl) return Promise.resolve();
     return fetch(CFG.ttsUrl, { method: "POST", headers: { "content-type": "application/json" }, credentials: "include", body: JSON.stringify({ sessionId: sessionId, text: forTts(speakText(el)) }) })
       .then(function (r) { if (!r.ok) throw new Error("tts " + r.status); return r.blob(); })
