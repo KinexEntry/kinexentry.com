@@ -8,7 +8,7 @@
   <link rel="icon" href="assets/favicon.png">
   <link rel="apple-touch-icon" href="assets/icon-512.png">
   <link rel="stylesheet" href="site.css?v=20261008c">
-  <link rel="stylesheet" href="/josie/josie-site.css?v=20261031">
+  <link rel="stylesheet" href="/josie/josie-site.css?v=20261104r">
 </head>
 <body>
   <header class="wrap top">
@@ -196,12 +196,12 @@
     // Josie's settings. The help and voice routes live on the API; the rule-book route is switched on when the library ships.
     (function () {
       var api = /^(localhost|127.0.0.1)$/.test(location.hostname) ? "http://localhost:8787" : "https://api.kinexentry.com";
-      window.JOSIE_SITE = { api: api, assetBase: "/josie/", chatUrl: api + "/v1/help/chat", ttsUrl: api + "/v1/help/tts", rulesUrl: null, hat: "auto" };
+      window.JOSIE_SITE = { api: api, assetBase: "/josie/", chatUrl: api + "/v1/help/chat", ttsUrl: api + "/v1/help/tts", rulesUrl: api + "/v1/help/rules", hat: "auto" };
     })();
   </script>
   <script src="/josie/josie-hat-season.js?v=20261031"></script>
   <script src="/josie/kinexentry-helper.config.js?v=20261031"></script>
-  <script src="/josie/josie-site-chat.js?v=20261104"></script>
+  <script src="/josie/josie-site-chat.js?v=20261104r"></script>
   <script>
     // Contact Us: the button opens the form; sending posts it to the API, which emails the office.
     (function () {
