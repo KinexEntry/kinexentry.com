@@ -26,6 +26,7 @@
 .kchat-hear.playing { opacity: 1; animation: josie-pulse 1s ease-in-out infinite; }
 @keyframes josie-pulse { 50% { transform: scale(1.18); } }
 .kchat-cites { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+a.kchat-cite { text-decoration: none; } a.kchat-cite:hover { color: var(--text, #f1e9dc); border-color: #6b5a4c; }
 .kchat-cite { font-size: 11.5px; line-height: 1.3; padding: 3px 8px; border-radius: 999px; background: #2f2a25; border: 1px solid #4a4038; color: var(--muted, #a2988a); }
 .kchat-typing { display: inline-flex; gap: 4px; padding: 12px 14px !important; }
 .kchat-typing i { width: 7px; height: 7px; border-radius: 50%; background: var(--muted, #a2988a); animation: josie-dot 1s infinite; }

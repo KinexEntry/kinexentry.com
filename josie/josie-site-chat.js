@@ -15,7 +15,7 @@
  *     assetBase: '/josie/',                    // where poses/, audio/ live
  *     chatUrl:   null,                         // '/api/help/chat' once the help endpoint is live; null = scripted FAQ
  *     ttsUrl:    null,                         // '/api/help/tts' once live; null = only pre-rendered clips can be heard
- *     rulesUrl:  null,                         // '/api/rules/ask' once live; null = no "Rule book question" option
+ *     rulesUrl:  null,                         // api + '/v1/help/rules'; null = no "Rule book question" option
  *     hat:       'auto'                        // 'auto' | 'felt' | 'straw'
  *   }
  * Needs josie-hat-season.js first (seasonal hat). If window.KINEX_HELPER_CONFIG (widget/kinexentry-helper.config.js)
@@ -146,7 +146,7 @@
   function stopAudio(keepQueue) { if (!keepQueue) { readQueue = []; reading = false; } if (audio) { audio.onended = audio.onerror = null; audio.pause(); audio = null; } if (audioUrl) { URL.revokeObjectURL(audioUrl); audioUrl = null; } if (mouth.on) stopFlap(); log.querySelectorAll(".kchat-hear.playing").forEach(function (b) { b.classList.remove("playing"); }); }
   function readNext() { stopAudio(true); var d = readQueue.shift(); if (d) play(d, d.querySelector(".kchat-hear"), true); else reading = false; }
   function readAloud(d) { if (reading) { readQueue.push(d); return; } reading = true; play(d, d.querySelector(".kchat-hear"), true); }
-  function speakText(el) { var c = el.cloneNode(true); c.querySelectorAll(".kchat-hear, .kchat-cites").forEach(function (x) { x.remove(); }); return c.textContent.replace(/[✕⚠•]/g, "").replace(/\s+/g, " ").trim(); }
+  function speakText(el) { var c = el.cloneNode(true); c.querySelectorAll(".kchat-hear, .kchat-cites").forEach(function (x) { x.remove(); }); return c.textContent.replace(/\s*\([A-Z]{2,6} Rule Book \d{4}, .*?p\. \d+\)/g, "").replace(/[✕⚠•]/g, "").replace(/\s+/g, " ").trim(); }
   // Only the newest request may start audio: an answer fetched a moment ago must not start on top of the line now playing.
   var playGen = 0;
   function play(el, btn, queued) {
@@ -269,11 +269,24 @@
   }
 
   // ── Josie's menu ──
-  function association() {   // known once the event is looked up AND the contestant has a pass for it
+  // The rule book Josie answers from: the one the contestant picked, else this event's association when its book is
+  // loaded. One association at a time, never stacked (RULEBOOK_KNOWLEDGE.md).
+  var books = null;
+  function loadBooks() {
+    if (books) return Promise.resolve(books);
+    return fetch(CFG.rulesUrl + "/books").then(function (r) { return r.json(); }).then(function (j) { books = (j && j.books) || []; return books; }).catch(function () { return []; });
+  }
+  function bookFor(name) {
+    if (!books || !name) return null;
+    var n = String(name).toLowerCase();
+    return books.filter(function (b) { return b.id === n || b.short.toLowerCase() === n || b.name.toLowerCase() === n || n.indexOf(b.name.toLowerCase()) >= 0 || new RegExp("\\b" + b.short.toLowerCase() + "\\b").test(n); })[0] || null;
+  }
+  function association() {
+    if (!CFG.rulesUrl) return null;
+    if (S.rulesBook) return S.rulesBook;
     var a = S.rodeo && (S.rodeo.association || S.rodeo.associationName);
-    if (!a || !S.pass || !CFG.rulesUrl) return null;
-    if (typeof a === "string") a = { name: a };
-    return a.hasRuleBook === false ? null : a;
+    if (a && typeof a === "object") a = a.name || a.short;
+    return bookFor(a);
   }
   function menu(lead) {
     finishAll(); noText();
@@ -283,17 +296,20 @@
       { label: "Get help", onPick: function (b, r) { finish(r); echo("Get help"); startHelp(); } },
     ];
     var a = association();
-    if (a) items.push({ label: "Rule book question", onPick: function (b, r) { finish(r); echo("Rule book question"); startRules(); } });
+    if (CFG.rulesUrl) items.push({ label: "Rule book question", onPick: function (b, r) { finish(r); echo("Rule book question"); startRules(); } });
     chips(items);
     // Typing digits jumps straight to the entry flow, like the old bubble; anything else goes to help.
     expectText(a ? "Event number, or ask me something" : "Event number, or ask me something", function (t) {
-      if (/^\s*#?\d{2,7}\s*$/.test(t)) { finishAll(); lookupEvent(t); } else { finishAll(); helpAnswer(t); }
+      if (/^\s*#?\d{2,7}\s*$/.test(t)) { finishAll(); lookupEvent(t); }
+      else if (CFG.rulesUrl && books && bookFor(t) && /\b(rule|rules|penalt|fine|allowed|legal|disqualif|points?|dress|release|turn ?out|no show)\b/i.test(t)) { finishAll(); S.rulesBook = bookFor(t); rulesAnswer(t); }
+      else { finishAll(); helpAnswer(t); }
     });
   }
 
   // ── the conversation ──
   function start() {
     if (started) return; started = true;
+    if (CFG.rulesUrl) loadBooks();
     say("Howdy! I'm Josie, your Kinex Entry helper. I can enter you in an event any time of day, or help you with the app.", null, { clip: "audio/greeting.mp3" });
     menu("What can I do for you? If you've got the event number, just type it.");
   }
@@ -468,7 +484,7 @@
       { label: "Another event at " + S.rodeo.name, onPick: function (b, r) { finish(r); echo("Another event here"); eventTiles(); } },
       { label: "A different event", onPick: function (b, r) { finish(r); restart(); } },
     ];
-    if (association()) items.push({ label: "Rule book question", onPick: function (b, r) { finish(r); echo("Rule book question"); startRules(); } });
+    if (CFG.rulesUrl) items.push({ label: "Rule book question", onPick: function (b, r) { finish(r); echo("Rule book question"); startRules(); } });
     items.push({ label: "Done", onPick: function (b, r) { finish(r); say("Good luck out there!", null, { pose: "waving" }); noText(); } });
     chips(items);
   }
@@ -496,7 +512,7 @@
     if (a && a.escalate) say(plain((HELP && HELP.escalation && HELP.escalation.text) || "Email info@kinexentry.com or call (479) 510-4138."), null, { quiet: true });
     var items = [{ label: "Ask something else", onPick: function (b, r) { finish(r); echo("Ask something else"); startHelp(); } },
                  { label: "Enter an event", onPick: function (b, r) { finish(r); echo("Enter an event"); if (S.rodeo && S.pass) eventTiles(); else restart(true); } }];
-    if (association()) items.push({ label: "Rule book question", onPick: function (b, r) { finish(r); echo("Rule book question"); startRules(); } });
+    if (CFG.rulesUrl) items.push({ label: "Rule book question", onPick: function (b, r) { finish(r); echo("Rule book question"); startRules(); } });
     items.push({ label: "Talk to a person", onPick: function (b, r) { finish(r); echo("Talk to a person"); say(plain((HELP && HELP.escalation && HELP.escalation.text) || "Email info@kinexentry.com or call (479) 510-4138.")); afterHelp(); } });
     chips(items);
     expectText("Ask Josie about the app", function (t) { finishAll(); helpAnswer(t); });
@@ -521,33 +537,55 @@
     }).catch(function () { dots.remove(); var a = scripted(q); say(plain(a.text), null, { pose: a.pose }); afterHelp(a); });
   }
 
-  // ── Rule book question: this event's association's own book only (strict scope, decided Oct 30, 2026) ──
+  // ── Rule book question: one association's own book only (strict scope, decided Oct 30, 2026) ──
+  // The contestant picks the association, or it comes from the event they looked up. Answers are the book's own words
+  // with Article, Section, sub-item and page, each citation linked to that page of the association's PDF.
   function startRules() {
-    var a = association();
-    if (!a) { menu("I need to know which association first. Look up your event and contestant ID, then I can answer from that association's rule book."); return; }
-    say("Ask me anything in the " + a.name + " rule book. I'll answer from that book only, every part of your question, and tell you the rule and page.");
-    expectText("Your rule question", rulesAnswer);
+    loadBooks().then(function () {
+      var a = association();
+      if (!a) { pickAssociation(); return; }
+      say("Ask me anything in the " + a.short + " (" + a.name + ") " + a.version + " rule book. I'll answer from that book only, every part of your question, and give you the rule and page.");
+      expectText("Your " + a.short + " rule question", rulesAnswer);
+    });
   }
-  function rulesAnswer(q) {
-    var a = association(); if (!a) { startRules(); return; }
+  function pickAssociation() {
+    noText();
+    say("Which association's rule book? I answer from one association's own book at a time.");
+    var items = (books || []).map(function (bk) { return { label: bk.short + " (" + bk.name + ")", onPick: function (b, r) { finish(r); echo(bk.short); S.rulesBook = bk; startRules(); } }; });
+    items.push({ label: "A different association", onPick: function (b, r) { finish(r); echo("A different association"); say("Which one?"); expectText("Association name", otherAssociation); } });
+    chips(items);
+    expectText("Association name", otherAssociation);
+  }
+  function otherAssociation(t) {
+    finishAll(); noText();
+    var bk = bookFor(t);
+    if (bk) { S.rulesBook = bk; startRules(); return; }
+    // Not loaded: the server says so and points to that association's office; nothing is answered from another book.
+    rulesAnswer("What does the rule book say?", t.slice(0, 80));
+  }
+  function rulesAnswer(q, other) {
+    var a = other ? null : association(); if (!a && !other) { startRules(); return; }
     noText();
     var dots = thinking(), d = null, txt = "";
-    // No association id is sent: the server resolves it from the pass (this event's association). There is no field
-    // for a second, parent or national book, and the server would ignore one.
-    stream(CFG.rulesUrl, { question: q.slice(0, 1000), sessionId: sessionId, rodeoId: S.rodeo.id }, S.pass, function (delta) {
+    stream(CFG.rulesUrl, { question: q.slice(0, 1000), sessionId: sessionId, association: other || a.id }, null, function (delta) {
       if (!d) { dots.remove(); d = document.createElement("div"); d.className = "kchat-msg bot"; row(d); }
       txt += delta; d.textContent = plain(txt); scrollDown();
     }).then(function (fin) {
-      if (fin && fin.error) { dots.remove(); if (passGone(fin)) return expired(); say(trouble(fin.body, "I couldn't reach the rule book just now. Try again in a minute."), null, { pose: "sorry" }); rulesMore(); return; }
-      if (!d) { dots.remove(); d = say("I couldn't find that in the " + a.name + " rule book. Check with the association office.", null, { pose: "sorry" }); }
+      if (fin && fin.error) { dots.remove(); say(trouble(fin.body, "I couldn't reach the rule book just now. Try again in a minute."), null, { pose: "sorry" }); rulesMore(); return; }
+      if (!d) { dots.remove(); d = say(fin && fin.text ? plain(fin.text) : "I couldn't find that in the rule book. Check with the association office.", null, { pose: "sorry" }); }
       else {
+        if (fin.text) d.textContent = plain(fin.text);
         if (fin.citations && fin.citations.length) {
           var c = document.createElement("span"); c.className = "kchat-cites";
-          fin.citations.forEach(function (x) { var s = document.createElement("span"); s.className = "kchat-cite"; s.textContent = x.label + (x.page ? " · p. " + x.page : "") + (x.version ? " · " + x.version : ""); c.appendChild(s); });
+          fin.citations.forEach(function (x) {
+            var s = document.createElement(x.url ? "a" : "span"); s.className = "kchat-cite";
+            if (x.url) { s.href = x.url; s.target = "_blank"; s.rel = "noopener"; s.title = "Open " + (x.document || "the rule book") + " at page " + x.page; }
+            s.textContent = x.label + (x.page ? " · p. " + x.page : "") + (x.version ? " · " + x.version : ""); c.appendChild(s);
+          });
           d.appendChild(c);
         }
         hold(fin.refused ? "sorry" : (fin.pose || "success"));
-        addHear(d); if (voiceOn) readAloud(d);   // reads the entire answer
+        addHear(d); if (voiceOn) readAloud(d);   // reads the answer; the citation chips are not read
       }
       rulesMore();
     }).catch(function () { dots.remove(); say("I couldn't reach the rule book just now. Try again in a minute.", null, { pose: "sorry" }); rulesMore(); });
@@ -555,10 +593,12 @@
   function rulesMore() {
     chips([
       { label: "Another rule question", onPick: function (b, r) { finish(r); echo("Another rule question"); startRules(); } },
-      { label: "Enter an event", onPick: function (b, r) { finish(r); echo("Enter an event"); eventTiles(); } },
+      { label: "Change association", onPick: function (b, r) { finish(r); echo("Change association"); S.rulesBook = null; loadBooks().then(pickAssociation); } },
+      { label: "Enter an event", onPick: function (b, r) { finish(r); echo("Enter an event"); if (S.rodeo && S.pass) eventTiles(); else restart(true); } },
       { label: "Get help", onPick: function (b, r) { finish(r); echo("Get help"); startHelp(); } },
     ]);
-    expectText("Another rule question", function (t) { finishAll(); rulesAnswer(t); });
+    var a = association();
+    expectText(a ? "Another " + a.short + " rule question" : "Another rule question", function (t) { finishAll(); if (association()) rulesAnswer(t); else startRules(); });
   }
 
   // ── wiring (chat.js behavior kept: page position saved, body locked on phones, panel fitted to the keyboard) ──
