@@ -51,18 +51,80 @@
   var avatar = BASE + "poses/" + hat + "/avatar_96.png";
   document.querySelectorAll("[data-josie-avatar]").forEach(function (img) { img.src = avatar; });
   panel.setAttribute("data-hat", hat);
-  var flapTimer = null, holdTimer = null;
+  var holdTimer = null;
   function setPose(name) { if (face) face.src = pose(name); }
-  function flap(ms) {
-    if (!face) return;
-    clearInterval(flapTimer); clearTimeout(holdTimer);
-    var reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduce) { setPose("talking"); holdTimer = setTimeout(function () { setPose("idle"); }, ms); return; }
-    var o = false; flapTimer = setInterval(function () { o = !o; setPose(o ? "talking" : "talk_closed"); }, 140);
-    holdTimer = setTimeout(stopFlap, ms);
+  // Both mouth frames are fetched up front so a swap never waits on the network (felt and straw each have their own).
+  ["talking", "talk_closed"].forEach(function (n) { var i = new Image(); i.src = pose(n); });
+  // A pose for after she finishes speaking. While audio plays the mouth owns the face; the pose waits for the end.
+  function hold(name, ms) {
+    clearTimeout(holdTimer);
+    if (mouth.on) { mouth.after = name; return; }
+    setPose(name); if (name !== "idle") holdTimer = setTimeout(function () { setPose("idle"); }, ms || 2200);
   }
-  function stopFlap(end) { clearInterval(flapTimer); flapTimer = null; setPose(end || "idle"); }
-  function hold(name, ms) { clearInterval(flapTimer); clearTimeout(holdTimer); setPose(name); holdTimer = setTimeout(function () { setPose("idle"); }, ms || 2200); }
+
+  // ── lip sync: the mouth follows the audio that is actually playing ──
+  // The clip's own sound is decoded and cut into 25 ms steps. A step is "open" when it is louder than the silence
+  // floor and at or above the loudness around it (that gives the syllable flap); pauses fall below the floor and
+  // close the mouth. Each animation frame reads audio.currentTime, so the mouth is shut whenever the audio is
+  // paused, buffering, ended or not started. Nothing is timed from the text or a guessed duration.
+  var MOUTH_STEP = 0.025;
+  var mouth = { on: false, el: null, open: null, raf: 0, after: null, shown: null };
+  function mouthSteps(buf) {
+    var ch = buf.getChannelData(0), sr = buf.sampleRate, h = Math.max(1, Math.round(sr * MOUTH_STEP)), n = Math.floor(ch.length / h);
+    var db = new Array(n), i, k;
+    for (k = 0; k < n; k++) { var sum = 0; for (i = k * h; i < (k + 1) * h; i++) sum += ch[i] * ch[i]; db[k] = 10 * Math.log10(sum / h + 1e-10); }
+    var sorted = db.slice().sort(function (a, b) { return a - b; });
+    var floor = Math.max((sorted[Math.floor(n * 0.95)] || -50) - 30, -50);
+    var out = new Uint8Array(n);
+    for (k = 0; k < n; k++) {
+      var lo = Math.max(0, k - 4), hi = Math.min(n, k + 5), avg = 0;
+      for (i = lo; i < hi; i++) avg += db[i];
+      avg /= (hi - lo);
+      out[k] = db[k] > floor && db[k] >= avg ? 1 : 0;
+    }
+    var o = out.slice(0);
+    for (k = 1; k < n - 1; k++) if (out[k - 1] === out[k + 1] && out[k] !== out[k - 1]) o[k] = out[k - 1];
+    return o;
+  }
+  function decodeMouth(bytes) {
+    var AC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    if (!AC || !bytes) return Promise.resolve(null);
+    return new Promise(function (res) {
+      try {
+        var ctx = new AC(1, 1, 22050);
+        var p = ctx.decodeAudioData(bytes.slice(0), function (b) { res(mouthSteps(b)); }, function () { res(null); });
+        if (p && p.catch) p.catch(function () { res(null); });
+      } catch (e) { res(null); }
+    });
+  }
+  function mouthShape(name) { if (mouth.shown !== name) { mouth.shown = name; setPose(name); } }
+  function mouthFrame() {
+    mouth.raf = 0;
+    if (!mouth.on || !mouth.el) return;
+    var a = mouth.el, live = !a.paused && !a.ended && a.readyState >= 3, open = false;
+    if (live) {
+      if (mouth.reduce) open = true;                       // reduced motion: one still "talking" face, no flap
+      else if (mouth.open) open = mouth.open[Math.floor(a.currentTime / MOUTH_STEP)] === 1;
+      else if (mouth.open === null) open = Math.floor(a.currentTime / 0.14) % 2 === 0; // could not be decoded: flap only while it plays
+      // undefined: still decoding (a few hundred ms at most), so the mouth stays shut rather than guess
+    }
+    mouthShape(open ? "talking" : "talk_closed");
+    mouth.raf = requestAnimationFrame(mouthFrame);
+  }
+  function mouthStart(a, steps) {
+    mouth.on = true; mouth.el = a; mouth.open = steps; mouth.shown = null; mouth.after = null;
+    mouth.reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    clearTimeout(holdTimer);
+    if (!mouth.raf) mouth.raf = requestAnimationFrame(mouthFrame);
+  }
+  function stopFlap(end) {
+    var after = mouth.after;
+    mouth.on = false; mouth.el = null; mouth.open = null; mouth.after = null; mouth.shown = null;
+    if (mouth.raf) { cancelAnimationFrame(mouth.raf); mouth.raf = 0; }
+    var name = end || after || "idle";
+    setPose(name); clearTimeout(holdTimer);
+    if (name !== "idle") holdTimer = setTimeout(function () { setPose("idle"); }, 2200);
+  }
 
   // ── voice: off by default, tap 🔊 on any line to hear it; header toggle reads new lines aloud ──
   var VOICE_KEY = "josie-site-voice";
@@ -78,28 +140,39 @@
   function forTts(t) {   // keep in sync with server/pronunciation.ts
     return t.replace(/\bkinex\s*entry\.com\b/gi, "Kuh-nex Entry dot com").replace(/\bkinex(?=entry\b)/gi, "Kuh-nex ").replace(/\bkinex\b/gi, "Kuh-nex");
   }
-  function stopAudio() { if (audio) { audio.pause(); audio = null; } if (audioUrl) { URL.revokeObjectURL(audioUrl); audioUrl = null; } stopFlap(); log.querySelectorAll(".kchat-hear.playing").forEach(function (b) { b.classList.remove("playing"); }); }
+  // Lines read aloud on their own (voice on) wait their turn instead of cutting off the line that is playing.
+  // A tap on 🔊, closing the panel, the menu or muting stops everything and clears the queue.
+  var readQueue = [], reading = false;
+  function stopAudio(keepQueue) { if (!keepQueue) { readQueue = []; reading = false; } if (audio) { audio.onended = audio.onerror = null; audio.pause(); audio = null; } if (audioUrl) { URL.revokeObjectURL(audioUrl); audioUrl = null; } if (mouth.on) stopFlap(); log.querySelectorAll(".kchat-hear.playing").forEach(function (b) { b.classList.remove("playing"); }); }
+  function readNext() { stopAudio(true); var d = readQueue.shift(); if (d) play(d, d.querySelector(".kchat-hear"), true); else reading = false; }
+  function readAloud(d) { if (reading) { readQueue.push(d); return; } reading = true; play(d, d.querySelector(".kchat-hear"), true); }
   function speakText(el) { var c = el.cloneNode(true); c.querySelectorAll(".kchat-hear, .kchat-cites").forEach(function (x) { x.remove(); }); return c.textContent.replace(/[✕⚠•]/g, "").replace(/\s+/g, " ").trim(); }
   // Only the newest request may start audio: an answer fetched a moment ago must not start on top of the line now playing.
   var playGen = 0;
-  function play(el, btn) {
-    stopAudio();
+  function play(el, btn, queued) {
+    stopAudio(!!queued);
     var gen = ++playGen;
     var clip = el.getAttribute("data-clip");
-    var go = function (src) {
+    var go = function (src, bytes) {
       if (gen !== playGen) { if (src && src.indexOf("blob:") === 0) URL.revokeObjectURL(src); return Promise.resolve(); }
-      stopAudio();
-      audio = new Audio(src); if (btn) btn.classList.add("playing");
-      audio.onplaying = function () { flap((audio.duration || 4) * 1000); };
-      audio.onended = audio.onerror = function () { stopAudio(); };
-      return audio.play().catch(function () { stopAudio(); });
+      var after = mouth.after;
+      stopAudio(!!queued); mouth.after = after;
+      if (src.indexOf("blob:") === 0) audioUrl = src;   // owned from here on, so stopAudio() can't revoke it before it plays
+      var a = audio = new Audio(src); if (btn) btn.classList.add("playing");
+      // The mouth is shut until the decoded sound says otherwise; it is driven by a.currentTime, frame by frame.
+      mouthStart(a, undefined); mouth.after = after;
+      var steps = bytes ? decodeMouth(bytes) : fetch(src).then(function (r) { return r.ok ? r.arrayBuffer() : null; }).then(decodeMouth).catch(function () { return null; });
+      steps.then(function (st) { if (audio === a && mouth.el === a) mouth.open = st || null; });
+      var done = function () { if (audio !== a) return; if (queued) readNext(); else stopAudio(); };
+      a.onended = a.onerror = done;
+      return a.play().catch(done);
     };
     if (clip) return go(BASE + clip + "?v=" + CLIP_V);
-    if (!CFG.ttsUrl) return Promise.resolve();
+    if (!CFG.ttsUrl) { if (queued) readNext(); return Promise.resolve(); }
     return fetch(CFG.ttsUrl, { method: "POST", headers: { "content-type": "application/json" }, credentials: "include", body: JSON.stringify({ sessionId: sessionId, text: forTts(speakText(el)) }) })
-      .then(function (r) { if (!r.ok) throw new Error("tts " + r.status); return r.blob(); })
-      .then(function (b) { if (gen !== playGen) return; audioUrl = URL.createObjectURL(b); return go(audioUrl); })
-      .catch(function () { stopAudio(); });
+      .then(function (r) { if (!r.ok) throw new Error("tts " + r.status); return r.arrayBuffer(); })
+      .then(function (ab) { if (gen !== playGen) return; return go(URL.createObjectURL(new Blob([ab], { type: "audio/mpeg" })), ab); })
+      .catch(function () { if (gen !== playGen) return; if (queued) readNext(); else stopAudio(); });
   }
   function addHear(d) {
     if (!d.getAttribute("data-clip") && !CFG.ttsUrl) return;
@@ -116,9 +189,9 @@
     (extra || []).forEach(function (x) { var s = document.createElement("span"); s.className = x.tone; s.textContent = x.text; d.appendChild(s); });
     if (opts && opts.clip) d.setAttribute("data-clip", opts.clip);
     row(d); addHear(d); scrollDown();
-    flap(Math.min(2600, 500 + text.length * 18));
-    if (opts && opts.pose) setTimeout(function () { hold(opts.pose); }, Math.min(2600, 500 + text.length * 18));
-    if (voiceOn && !(opts && opts.quiet)) play(d, d.querySelector(".kchat-hear"));
+    // Her mouth moves only to sound that is playing. A line shown without voice gets her pose, mouth closed.
+    hold((opts && opts.pose) || "idle");
+    if (voiceOn && !(opts && opts.quiet)) readAloud(d);
     return d;
   }
   function echo(text) { var d = document.createElement("div"); d.className = "kchat-msg user"; d.textContent = text; log.appendChild(d); scrollDown(); }
@@ -158,7 +231,7 @@
   window.addEventListener("resize", fitPanel);
   function expectText(placeholder, fn) { onText = fn; input.placeholder = placeholder; input.disabled = false; if (window.innerWidth > 640) input.focus(); }
   function noText() { onText = null; input.placeholder = "Tap an option above"; }
-  function thinking() { var d = document.createElement("div"); d.className = "kchat-msg bot kchat-typing"; d.innerHTML = "<i></i><i></i><i></i>"; d.setAttribute("aria-label", "Josie is typing"); var r = row(d); scrollDown(); clearInterval(flapTimer); setPose("thinking"); return { remove: function () { r.remove(); setPose("idle"); } }; }
+  function thinking() { var d = document.createElement("div"); d.className = "kchat-msg bot kchat-typing"; d.innerHTML = "<i></i><i></i><i></i>"; d.setAttribute("aria-label", "Josie is typing"); var r = row(d); scrollDown(); if (!mouth.on) { clearTimeout(holdTimer); setPose("thinking"); } return { remove: function () { r.remove(); if (!mouth.on) setPose("idle"); } }; }
 
   // ── words (unchanged) ──
   var usd = function (c) { return "$" + (c / 100).toFixed(2).replace(/\.00$/, ""); };
@@ -438,11 +511,11 @@
     var d = null, txt = "";
     stream(CFG.chatUrl, { sessionId: sessionId, message: q.slice(0, 500), history: helpHistory.slice(-12), context: { screen: "website" } }, null, function (delta) {
       if (!d) { dots.remove(); d = document.createElement("div"); d.className = "kchat-msg bot"; row(d); }
-      txt += delta; d.textContent = plain(txt); scrollDown(); flap(600);
+      txt += delta; d.textContent = plain(txt); scrollDown();
     }).then(function (fin) {
       if (fin && fin.error) { dots.remove(); var a = scripted(q); say(plain(a.text), null, { pose: a.pose }); afterHelp(a); return; }
       if (!d) { dots.remove(); d = say("Sorry, I lost my train of thought. Try that again?", null, { pose: "sorry" }); }
-      else { if (fin.text) { txt = fin.text; d.textContent = plain(txt); } addHear(d); if (voiceOn) play(d, d.querySelector(".kchat-hear")); hold(fin.pose || "idle"); }
+      else { if (fin.text) { txt = fin.text; d.textContent = plain(txt); } addHear(d); hold(fin.pose || "idle"); if (voiceOn) readAloud(d); }
       helpHistory.push({ role: "user", content: q }, { role: "assistant", content: txt });
       afterHelp(fin);
     }).catch(function () { dots.remove(); var a = scripted(q); say(plain(a.text), null, { pose: a.pose }); afterHelp(a); });
@@ -463,7 +536,7 @@
     // for a second, parent or national book, and the server would ignore one.
     stream(CFG.rulesUrl, { question: q.slice(0, 1000), sessionId: sessionId, rodeoId: S.rodeo.id }, S.pass, function (delta) {
       if (!d) { dots.remove(); d = document.createElement("div"); d.className = "kchat-msg bot"; row(d); }
-      txt += delta; d.textContent = plain(txt); scrollDown(); flap(600);
+      txt += delta; d.textContent = plain(txt); scrollDown();
     }).then(function (fin) {
       if (fin && fin.error) { dots.remove(); if (passGone(fin)) return expired(); say(trouble(fin.body, "I couldn't reach the rule book just now. Try again in a minute."), null, { pose: "sorry" }); rulesMore(); return; }
       if (!d) { dots.remove(); d = say("I couldn't find that in the " + a.name + " rule book. Check with the association office.", null, { pose: "sorry" }); }
@@ -473,8 +546,8 @@
           fin.citations.forEach(function (x) { var s = document.createElement("span"); s.className = "kchat-cite"; s.textContent = x.label + (x.page ? " · p. " + x.page : "") + (x.version ? " · " + x.version : ""); c.appendChild(s); });
           d.appendChild(c);
         }
-        addHear(d); if (voiceOn) play(d, d.querySelector(".kchat-hear"));   // reads the entire answer
         hold(fin.refused ? "sorry" : (fin.pose || "success"));
+        addHear(d); if (voiceOn) readAloud(d);   // reads the entire answer
       }
       rulesMore();
     }).catch(function () { dots.remove(); say("I couldn't reach the rule book just now. Try again in a minute.", null, { pose: "sorry" }); rulesMore(); });
@@ -492,7 +565,7 @@
   form.addEventListener("submit", function (e) {
     e.preventDefault();
     var t = input.value.trim(); if (!t || !onText) return;
-    input.value = ""; echo(t); onText(t);
+    input.value = ""; stopAudio(); echo(t); onText(t);   // a new question cuts off the old answer being read
   });
   function openPanel() { panel.hidden = false; open.setAttribute("aria-expanded", "true"); open.hidden = true; pageY = window.scrollY; document.body.classList.add("kchat-open"); document.body.style.top = -pageY + "px"; start(); fitPanel(); if (window.innerWidth > 640) input.focus(); }
   function closePanel() { stopAudio(); panel.hidden = true; open.hidden = false; open.setAttribute("aria-expanded", "false"); document.body.classList.remove("kchat-open"); document.body.style.top = ""; panel.style.height = ""; panel.style.top = ""; window.scrollTo(0, pageY); open.focus(); }
