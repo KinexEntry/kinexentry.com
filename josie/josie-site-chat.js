@@ -138,8 +138,14 @@
     voiceBtn.title = voiceOn ? "Voice on" : "Voice off";
   }
   function forTts(t) {   // keep in sync with server/pronunciation.ts
+    var digs = function (n) { return n.split("").join(" "); };
+    var speakPhone = function (area, mid, last, prefix1) { return (prefix1 ? "1, " : "") + digs(area) + ", " + digs(mid) + ", " + digs(last); };
     return t.replace(/\bkinex\s*entry\.com\b/gi, "Kuh-nex Entry dot com").replace(/\bkinex(?=entry\b)/gi, "Kuh-nex ").replace(/\bkinex\b/gi, "Kuh-nex")
-      .replace(/\b(ACRA|PRCA|IPRA|PBR|WPRA|NHSRA|NIRA|CPRA|NFR)\b/gi, function (m) { return m.toUpperCase().split("").join(". ") + "."; });   // A. C. R. A., letter by letter
+      .replace(/\b(ACRA|PRCA|IPRA|PBR|WPRA|NHSRA|NIRA|CPRA|NFR)\b/gi, function (m) { return m.toUpperCase().split("").join(". ") + "."; })   // A. C. R. A., letter by letter
+      .replace(/(?:\+?1[\s\-.]*)?(?:\((\d{3})\)|\b(\d{3}))[\s\-.\n]*(\d{3})[\s\-.\n]*(\d{4})\b/g, function (m, aParen, aBare, mid, last) {
+        return speakPhone(aParen || aBare, mid, last, /^\+?1/.test(m));
+      })
+      .replace(/\b(\d{10})\b/g, function (_m, ten) { return speakPhone(ten.slice(0, 3), ten.slice(3, 6), ten.slice(6), false); });
   }
   // Lines read aloud on their own (voice on) wait their turn instead of cutting off the line that is playing.
   // A tap on 🔊, closing the panel, the menu or muting stops everything and clears the queue.
