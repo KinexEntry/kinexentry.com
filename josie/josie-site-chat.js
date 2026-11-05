@@ -138,7 +138,8 @@
     voiceBtn.title = voiceOn ? "Voice on" : "Voice off";
   }
   function forTts(t) {   // keep in sync with server/pronunciation.ts
-    return t.replace(/\bkinex\s*entry\.com\b/gi, "Kuh-nex Entry dot com").replace(/\bkinex(?=entry\b)/gi, "Kuh-nex ").replace(/\bkinex\b/gi, "Kuh-nex");
+    return t.replace(/\bkinex\s*entry\.com\b/gi, "Kuh-nex Entry dot com").replace(/\bkinex(?=entry\b)/gi, "Kuh-nex ").replace(/\bkinex\b/gi, "Kuh-nex")
+      .replace(/\b(ACRA|PRCA|IPRA|PBR|WPRA|NHSRA|NIRA|CPRA|NFR)\b/gi, function (m) { return m.toUpperCase().split("").join(". ") + "."; });   // A. C. R. A., letter by letter
   }
   // Lines read aloud on their own (voice on) wait their turn instead of cutting off the line that is playing.
   // A tap on 🔊, closing the panel, the menu or muting stops everything and clears the queue.
