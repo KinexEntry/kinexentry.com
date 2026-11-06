@@ -68,6 +68,7 @@ nav a:hover, nav a[aria-current] { color: var(--cream); text-decoration: none; }
   display: inline-flex; align-items: center; gap: 8px;
   padding: 12px 18px; border-radius: 10px; font-weight: 700; font-size: 15px;
   border: 1px solid var(--line); color: var(--cream); background: var(--ink-2);
+  text-decoration: none;
 }
 .btn:hover { text-decoration: none; border-color: var(--muted); }
 .btn.primary { background: var(--copper); border-color: var(--copper); color: #fff; }
@@ -214,6 +215,12 @@ nav { align-items: center; row-gap: 10px; }
 /* The phone number sits under Contact Us, on its own line. */
 .band .callus { margin: 14px 0 0; font-size: 15px; color: #d9d2c6 !important; }
 .band .callus a { font-weight: 700; }
+.band .callus .text-link {
+  background: none; border: 0; padding: 0; margin: 0;
+  color: inherit; font: inherit; font-weight: 700;
+  text-decoration: underline; cursor: pointer;
+}
+.band .callus .text-link:hover { filter: brightness(1.08); }
 /* On a phone the Sign In door fills its half of the row, like Create An Account. */
 @media (max-width: 640px) {
   nav .navmenu summary.navbtn { display: block; width: 100%; text-align: center; padding: 12px 10px; font-size: 14px; }
