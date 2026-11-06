@@ -117,9 +117,28 @@
         good at: putting on events.
       </p>
       <div class="cta">
-        <button class="btn primary" type="button" id="contact-open" aria-expanded="false" aria-controls="contact-form">Contact Us</button>
+        <button class="btn primary" type="button" id="demo-open" aria-expanded="false" aria-controls="demo-form">Book a Demo</button>
+        <button class="btn" type="button" id="contact-open" aria-expanded="false" aria-controls="contact-form">Contact Us</button>
       </div>
       <p class="callus">Or call us directly: <a href="tel:+14795104138">(479) 510-4138</a></p>
+
+      <form class="contact" id="demo-form" hidden novalidate>
+        <p class="contact-lede">Pick a time that works and we will walk you through Kinex Entry. Or call <a href="tel:+14795104138">(479) 510-4138</a>.</p>
+        <div class="fields">
+          <label>Your name<input name="name" required maxlength="120" autocomplete="name"></label>
+          <label>Email<input name="email" type="email" required maxlength="200" autocomplete="email"></label>
+          <label>Phone<input name="phone" type="tel" maxlength="40" autocomplete="tel"></label>
+          <label>Outfit or association<input name="organization" maxlength="160" autocomplete="organization"></label>
+          <label class="span-2">Preferred day / time window<input name="preferredTime" required maxlength="200" placeholder="e.g. Tue or Thu after 4 PM CT"></label>
+        </div>
+        <label>Notes<textarea name="message" rows="4" maxlength="4000" placeholder="Anything we should know before we meet"></textarea></label>
+        <input type="hidden" name="intent" value="demo">
+        <label class="trap" aria-hidden="true">Website<input name="website" tabindex="-1" autocomplete="off"></label>
+        <div class="cta" style="margin-top: 6px;">
+          <button class="btn primary" type="submit">Request demo</button>
+          <span class="contact-status" id="demo-status" role="status"></span>
+        </div>
+      </form>
 
       <form class="contact" id="contact-form" hidden novalidate>
         <p class="contact-lede">Tell us a little about your outfit or association and we will get right back to you. Or call <a href="tel:+14795104138">(479) 510-4138</a>.</p>
@@ -130,6 +149,7 @@
           <label>Outfit or association<input name="organization" maxlength="160" autocomplete="organization"></label>
         </div>
         <label>How can we help?<textarea name="message" rows="5" required maxlength="4000"></textarea></label>
+        <input type="hidden" name="intent" value="contact">
         <label class="trap" aria-hidden="true">Website<input name="website" tabindex="-1" autocomplete="off"></label>
         <div class="cta" style="margin-top: 6px;">
           <button class="btn primary" type="submit">Send</button>
@@ -203,35 +223,83 @@
   <script src="/josie/kinexentry-helper.config.js?v=20261031"></script>
   <script src="/josie/josie-site-chat.js?v=20261104r"></script>
   <script>
-    // Contact Us: the button opens the form; sending posts it to the API, which emails the office.
+    // Book a Demo and Contact Us: each button opens its form; sending posts to the API, which emails the office.
     (function () {
       var API = "https://api.kinexentry.com";
-      var open = document.getElementById("contact-open");
-      var form = document.getElementById("contact-form");
-      var status = document.getElementById("contact-status");
-      open.addEventListener("click", function () {
+      var demoOpen = document.getElementById("demo-open");
+      var contactOpen = document.getElementById("contact-open");
+      var demoForm = document.getElementById("demo-form");
+      var contactForm = document.getElementById("contact-form");
+      var demoStatus = document.getElementById("demo-status");
+      var contactStatus = document.getElementById("contact-status");
+
+      function showForm(form, openBtn, otherForm, otherBtn) {
         var show = form.hidden;
         form.hidden = !show;
-        open.setAttribute("aria-expanded", show ? "true" : "false");
-        if (show) form.querySelector("[name=name]").focus();
+        openBtn.setAttribute("aria-expanded", show ? "true" : "false");
+        if (show) {
+          otherForm.hidden = true;
+          otherBtn.setAttribute("aria-expanded", "false");
+          form.querySelector("[name=name]").focus();
+        }
+      }
+
+      function wireSubmit(form, statusEl, requireMessage) {
+        form.addEventListener("submit", function (e) {
+          e.preventDefault();
+          var data = {};
+          new FormData(form).forEach(function (v, k) { data[k] = String(v).trim(); });
+          if (!data.name || !data.email) {
+            statusEl.textContent = "Your name and email, please.";
+            return;
+          }
+          if (data.intent === "demo") {
+            if (!data.preferredTime) {
+              statusEl.textContent = "Tell us a preferred day or time window.";
+              return;
+            }
+            if (!data.message || data.message.length < 10) {
+              data.message = "I would like to book a demo of Kinex Entry.";
+            }
+          } else if (!data.message || data.message.length < 10) {
+            statusEl.textContent = "Your name, email and a message, please.";
+            return;
+          }
+          statusEl.textContent = "Sending…";
+          var button = form.querySelector("button[type=submit]");
+          button.disabled = true;
+          fetch(API + "/v1/contact", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(data) })
+            .then(function (r) { return r.json().then(function (body) { return { ok: r.ok, body: body }; }); })
+            .then(function (r) {
+              if (r.ok) {
+                form.reset();
+                if (form.querySelector("[name=intent]")) {
+                  form.querySelector("[name=intent]").value = data.intent || "contact";
+                }
+                statusEl.textContent = data.intent === "demo"
+                  ? "Demo request sent. We will be in touch soon."
+                  : "Sent. We will be in touch soon.";
+              } else {
+                statusEl.textContent = (r.body && r.body.message) || "That did not go through. Call us at (479) 510-4138.";
+              }
+            })
+            .catch(function () { statusEl.textContent = "That did not go through. Call us at (479) 510-4138."; })
+            .then(function () { button.disabled = false; });
+        });
+      }
+
+      demoOpen.addEventListener("click", function () {
+        showForm(demoForm, demoOpen, contactForm, contactOpen);
       });
-      form.addEventListener("submit", function (e) {
-        e.preventDefault();
-        var data = {};
-        new FormData(form).forEach(function (v, k) { data[k] = String(v).trim(); });
-        if (!data.name || !data.email || !data.message) { status.textContent = "Your name, email and a message, please."; return; }
-        status.textContent = "Sending…";
-        var button = form.querySelector("button[type=submit]");
-        button.disabled = true;
-        fetch(API + "/v1/contact", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(data) })
-          .then(function (r) { return r.json().then(function (body) { return { ok: r.ok, body: body }; }); })
-          .then(function (r) {
-            if (r.ok) { form.reset(); status.textContent = "Sent. We will be in touch soon."; }
-            else { status.textContent = (r.body && r.body.message) || "That did not go through. Call us at (479) 510-4138."; }
-          })
-          .catch(function () { status.textContent = "That did not go through. Call us at (479) 510-4138."; })
-          .then(function () { button.disabled = false; });
+      contactOpen.addEventListener("click", function () {
+        showForm(contactForm, contactOpen, demoForm, demoOpen);
       });
+      wireSubmit(demoForm, demoStatus, false);
+      wireSubmit(contactForm, contactStatus, true);
+
+      if (location.hash === "#demo" || /[?&]demo=1\b/.test(location.search)) {
+        showForm(demoForm, demoOpen, contactForm, contactOpen);
+      }
     })();
   </script>
 </body>
