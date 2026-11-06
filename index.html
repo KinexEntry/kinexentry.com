@@ -117,13 +117,14 @@
         good at: putting on events.
       </p>
       <div class="cta">
-        <button class="btn primary" type="button" id="demo-open" aria-expanded="false" aria-controls="demo-form">Book a Demo</button>
+        <a class="btn primary" id="demo-open" href="https://calendar.app.google/t4qU9NfHbCBFmVNM8" target="_blank" rel="noopener noreferrer">Book a Demo</a>
         <button class="btn" type="button" id="contact-open" aria-expanded="false" aria-controls="contact-form">Contact Us</button>
       </div>
       <p class="callus">Or call us directly: <a href="tel:+14795104138">(479) 510-4138</a></p>
+      <p class="callus"><button class="text-link" type="button" id="demo-form-open" aria-expanded="false" aria-controls="demo-form">Prefer to request a demo by form?</button></p>
 
       <form class="contact" id="demo-form" hidden novalidate>
-        <p class="contact-lede">Pick a time that works and we will walk you through Kinex Entry. Or call <a href="tel:+14795104138">(479) 510-4138</a>.</p>
+        <p class="contact-lede">Can&apos;t find a slot on the calendar? Send a request and we will find a time. Or call <a href="tel:+14795104138">(479) 510-4138</a>.</p>
         <div class="fields">
           <label>Your name<input name="name" required maxlength="120" autocomplete="name"></label>
           <label>Email<input name="email" type="email" required maxlength="200" autocomplete="email"></label>
@@ -223,10 +224,12 @@
   <script src="/josie/kinexentry-helper.config.js?v=20261031"></script>
   <script src="/josie/josie-site-chat.js?v=20261104r"></script>
   <script>
-    // Book a Demo and Contact Us: each button opens its form; sending posts to the API, which emails the office.
+    // Book a Demo opens Google Appointment Schedule; Contact Us and the form fallback post to the API.
     (function () {
       var API = "https://api.kinexentry.com";
+      var DEMO_BOOKING = "https://calendar.app.google/t4qU9NfHbCBFmVNM8";
       var demoOpen = document.getElementById("demo-open");
+      var demoFormOpen = document.getElementById("demo-form-open");
       var contactOpen = document.getElementById("contact-open");
       var demoForm = document.getElementById("demo-form");
       var contactForm = document.getElementById("contact-form");
@@ -236,10 +239,12 @@
       function showForm(form, openBtn, otherForm, otherBtn) {
         var show = form.hidden;
         form.hidden = !show;
-        openBtn.setAttribute("aria-expanded", show ? "true" : "false");
+        if (openBtn) openBtn.setAttribute("aria-expanded", show ? "true" : "false");
         if (show) {
           otherForm.hidden = true;
-          otherBtn.setAttribute("aria-expanded", "false");
+          if (otherBtn) otherBtn.setAttribute("aria-expanded", "false");
+          if (openBtn !== demoFormOpen && demoFormOpen) demoFormOpen.setAttribute("aria-expanded", "false");
+          if (form === contactForm && demoFormOpen) demoFormOpen.setAttribute("aria-expanded", "false");
           form.querySelector("[name=name]").focus();
         }
       }
@@ -288,17 +293,17 @@
         });
       }
 
-      demoOpen.addEventListener("click", function () {
-        showForm(demoForm, demoOpen, contactForm, contactOpen);
-      });
       contactOpen.addEventListener("click", function () {
-        showForm(contactForm, contactOpen, demoForm, demoOpen);
+        showForm(contactForm, contactOpen, demoForm, demoFormOpen);
+      });
+      demoFormOpen.addEventListener("click", function () {
+        showForm(demoForm, demoFormOpen, contactForm, contactOpen);
       });
       wireSubmit(demoForm, demoStatus, false);
       wireSubmit(contactForm, contactStatus, true);
 
       if (location.hash === "#demo" || /[?&]demo=1\b/.test(location.search)) {
-        showForm(demoForm, demoOpen, contactForm, contactOpen);
+        window.location.replace(DEMO_BOOKING);
       }
     })();
   </script>
