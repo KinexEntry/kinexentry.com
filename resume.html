@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Finish your entry — Kinex Entry</title>
+  <link rel="icon" href="assets/favicon.png">
+  <link rel="stylesheet" href="site.css?v=20261008c">
+</head>
+<body>
+  <main class="wrap" style="max-width: 40rem; padding-top: 2rem">
+    <h1>Finish your entry</h1>
+    <p id="status">Checking the link…</p>
+    <div id="detail" hidden></div>
+    <p><a class="btn primary" id="go" hidden href="/?voiceResume=1">Continue on this site</a></p>
+    <p class="lede">The contestant app does not open this link yet. Use this page, then confirm the entry in the chat. The link works once.</p>
+  </main>
+  <script>
+    (function () {
+      var API = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) ? "http://localhost:8787" : "https://api.kinexentry.com";
+      var status = document.getElementById("status");
+      var detail = document.getElementById("detail");
+      var go = document.getElementById("go");
+      var token = (location.hash.match(/(?:^#|[?&])t=([^&]+)/) || [])[1];
+      if (!token) { status.textContent = "This link is missing its code. Ask Josie to send it again."; return; }
+      try { token = decodeURIComponent(token); } catch (e) {}
+      fetch(API + "/v1/voice/resume/redeem", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ token: token })
+      }).then(function (res) { return res.json().then(function (body) { return { ok: res.ok, body: body }; }); })
+        .then(function (r) {
+          if (!r.ok) {
+            var why = r.body && r.body.error;
+            status.textContent = why === "resume_used" ? "This link was already used."
+              : why === "resume_expired" ? "This link has expired. Call Josie again and ask for a new one."
+              : "This link can't be used.";
+            return;
+          }
+          var draft = r.body.draft || {};
+          var rodeo = draft.rodeo || {};
+          var klass = draft.klass;
+          try {
+            sessionStorage.setItem("kinexVoiceResume", JSON.stringify(Object.assign({ pass: r.body.pass }, draft)));
+          } catch (e) {}
+          status.textContent = "You're signed in for this entry only, for 20 minutes.";
+          detail.hidden = false;
+          detail.textContent = (klass && klass.name ? klass.name + " at " : "") + (rodeo.name || "your event")
+            + (rodeo.eventNumber ? " (#" + rodeo.eventNumber + ")" : "")
+            + ". Nothing is entered until you confirm it on the next page.";
+          go.hidden = false;
+          history.replaceState(null, "", location.pathname);
+        })
+        .catch(function () { status.textContent = "I couldn't reach Kinex Entry just now. Try the link again in a minute."; });
+    })();
+  </script>
+</body>
+</html>
