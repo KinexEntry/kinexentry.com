@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Finish your entry — Kinex Entry</title>
+  <link rel="icon" href="assets/favicon.png">
+  <link rel="stylesheet" href="site.css?v=20261107a">
+</head>
+<body>
+  <main class="wrap" style="max-width: 40rem; padding-top: 2rem">
+    <h1>Finish your entry</h1>
+    <p id="status">Checking the link…</p>
+    <form id="signin" class="contact" hidden>
+      <p class="contact-lede">Sign in with the email and password on your Kinex Entry account. This is the same sign-in as the app. This page cannot see a sign-in saved on the phone.</p>
+      <label>Email
+        <input id="email" name="email" type="email" autocomplete="username" required>
+      </label>
+      <label>Password
+        <input id="password" name="password" type="password" autocomplete="current-password" required minlength="8">
+      </label>
+      <button class="btn primary" id="signin-go" type="submit">Sign in</button>
+    </form>
+    <div id="detail" hidden></div>
+    <p><button class="btn primary" id="go" hidden type="button">Confirm entry</button></p>
+    <p class="lede">Signing in uses this link, before you confirm. Nothing is entered until you confirm. If you close this page before that, ask Josie for a new link.</p>
+  </main>
+  <script>
+    (function () {
+      var API = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) ? "http://localhost:8787" : "https://api.kinexentry.com";
+      var status = document.getElementById("status");
+      var detail = document.getElementById("detail");
+      var go = document.getElementById("go");
+      var form = document.getElementById("signin");
+      var resumeToken = (location.hash.match(/(?:^#|[?&])t=([^&]+)/) || [])[1];
+      var session = "";
+      if (!resumeToken) { status.textContent = "This link is missing its code. Ask Josie to send it again."; return; }
+      try { resumeToken = decodeURIComponent(resumeToken); } catch (e) {}
+      form.hidden = false;
+      status.textContent = "Sign in to see this entry. Nothing is entered until you confirm.";
+      var draft = null;
+      function redeem() {
+        fetch(API + "/v1/voice/resume/redeem", {
+          method: "POST",
+          headers: { "content-type": "application/json", authorization: "Bearer " + session },
+          body: JSON.stringify({ token: resumeToken })
+        }).then(function (res) { return res.json().then(function (body) { return { ok: res.ok, body: body }; }); })
+          .then(function (r) {
+            if (!r.ok) {
+              var why = r.body && r.body.error;
+              status.textContent = why === "resume_used" ? "This link was already used."
+                : why === "resume_expired" ? "This link has expired. Call Josie again and ask for a new one."
+                : why === "sign_in_required" ? "Sign in with your Kinex Entry email and password. A website chat pass cannot finish a phone entry."
+                : why === "forbidden" ? "That sign-in is a different account than the one on the phone."
+                : "This link can't be used.";
+              return;
+            }
+            draft = r.body.draft || {};
+            if (r.body.pass) { status.textContent = "This link can't be used."; return; }
+            var rodeo = draft.rodeo || {};
+            var klass = draft.klass;
+            status.textContent = "You're signed in. Nothing is entered until you confirm.";
+            detail.hidden = false;
+            detail.textContent = (klass && klass.name ? klass.name + " at " : "") + (rodeo.name || "your event")
+              + (rodeo.eventNumber ? " (#" + rodeo.eventNumber + ")" : "") + ".";
+            go.hidden = false;
+            history.replaceState(null, "", location.pathname);
+          })
+          .catch(function () { status.textContent = "I couldn't reach Kinex Entry just now. Try the link again in a minute."; });
+      }
+      form.addEventListener("submit", function (ev) {
+        ev.preventDefault();
+        var button = document.getElementById("signin-go");
+        button.disabled = true;
+        fetch(API + "/v1/auth/sign-in", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            email: document.getElementById("email").value,
+            password: document.getElementById("password").value
+          })
+        }).then(function (res) { return res.json().then(function (body) { return { ok: res.ok, body: body }; }); })
+          .then(function (r) {
+            if (!r.ok || !r.body || !r.body.token) {
+              status.textContent = "That email and password don't match. Nothing was entered.";
+              button.disabled = false;
+              return;
+            }
+            session = r.body.token;
+            form.hidden = true;
+            redeem();
+          })
+          .catch(function () {
+            status.textContent = "I couldn't reach Kinex Entry just now.";
+            button.disabled = false;
+          });
+      });
+      go.addEventListener("click", function () {
+        if (!draft || !draft.klass || !session) return;
+        go.disabled = true;
+        fetch(API + "/v1/entries", {
+          method: "POST",
+          headers: { "content-type": "application/json", authorization: "Bearer " + session },
+          body: JSON.stringify({
+            classId: draft.klass.id, horseId: draft.horseId || null, preferences: draft.prefs || [],
+            placement: draft.placement || "any", buddyCode: draft.buddyCode || null, sameDay: !!draft.sameDay,
+            partnerUserId: draft.partner ? draft.partner.userId : null, position: draft.position || null
+          })
+        }).then(function (res) { return res.json().then(function (body) { return { ok: res.ok, body: body }; }); })
+          .then(function (r) {
+            if (!r.ok) { status.textContent = "That didn't go through. Nothing new was entered."; go.disabled = false; return; }
+            status.textContent = "You're entered. Confirmation " + ((r.body.entry && r.body.entry.confirmationCode) || "") + ".";
+            go.hidden = true;
+          })
+          .catch(function () { status.textContent = "I couldn't reach Kinex Entry just now."; go.disabled = false; });
+      });
+    })();
+  </script>
+</body>
+</html>

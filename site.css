@@ -70,6 +70,8 @@ nav a:hover, nav a[aria-current] { color: var(--cream); text-decoration: none; }
   border: 1px solid var(--line); color: var(--cream); background: var(--ink-2);
   text-decoration: none;
 }
+/* Author display overrides the hidden attribute. Same fix as .contact and .kchat-panel. */
+.btn[hidden] { display: none; }
 .btn:hover { text-decoration: none; border-color: var(--muted); }
 .btn.primary { background: var(--copper); border-color: var(--copper); color: #fff; }
 .btn.primary:hover { filter: brightness(1.08); }
