@@ -314,28 +314,8 @@
   }
 
   // ── the conversation ──
-  function takeResume() {
-    var raw = null;
-    try { raw = sessionStorage.getItem("kinexVoiceResume"); sessionStorage.removeItem("kinexVoiceResume"); } catch (e) { return false; }
-    if (!raw) return false;
-    var d = null;
-    try { d = JSON.parse(raw); } catch (e) { return false; }
-    if (!d || !d.pass || !d.rodeo) return false;
-    S = d;
-    S.cards = d.cards || [];
-    S.horses = d.horses || [];
-    S.classes = d.classes || [];
-    S.performances = d.performances || [];
-    S.prefs = d.prefs || [];
-    say("I saved your spot from the phone call. Nothing is entered until you confirm it here.", null, { pose: "idle" });
-    if (S.klass) review();
-    else if (S.classes && S.classes.length) eventTiles();
-    else say("The event is open. Tell me the event number if you want to start over.");
-    return true;
-  }
   function start() {
     if (started) return; started = true;
-    if (takeResume()) return;
     if (CFG.rulesUrl) loadBooks();
     say("Howdy! I'm Josie, your Kinex Entry helper. I can enter you in an event any time of day, or help you with the app.", null, { clip: "audio/greeting.mp3" });
     menu("What can I do for you? If you've got the event number, just type it.");
@@ -643,5 +623,4 @@
   if (menuBtn) menuBtn.addEventListener("click", function () { if (!started) return; stopAudio(); menu("Here's what I can do:"); });
   setPose("idle");
   window.JosieSite = { open: openPanel, close: closePanel, hat: hat };
-  if (/[?&]voiceResume=1(?:&|$)/.test(location.search)) openPanel();
 })();

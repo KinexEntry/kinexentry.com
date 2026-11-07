@@ -12,8 +12,8 @@
     <h1>Finish your entry</h1>
     <p id="status">Checking the link…</p>
     <div id="detail" hidden></div>
-    <p><a class="btn primary" id="go" hidden href="/?voiceResume=1">Continue on this site</a></p>
-    <p class="lede">The contestant app does not open this link yet. Use this page, then confirm the entry in the chat. The link works once.</p>
+    <p><button class="btn primary" id="go" hidden type="button">Confirm entry</button></p>
+    <p class="lede">This link does not sign you in. Open it on a device where you are already signed in to the Kinex Entry app. Nothing is entered until you confirm.</p>
   </main>
   <script>
     (function () {
@@ -22,11 +22,15 @@
       var detail = document.getElementById("detail");
       var go = document.getElementById("go");
       var token = (location.hash.match(/(?:^#|[?&])t=([^&]+)/) || [])[1];
+      var session = "";
+      try { session = sessionStorage.getItem("kinexAuthToken") || ""; } catch (e) {}
       if (!token) { status.textContent = "This link is missing its code. Ask Josie to send it again."; return; }
       try { token = decodeURIComponent(token); } catch (e) {}
+      if (!session) { status.textContent = "Sign in to the Kinex Entry app on this device, then open the link again. This page will not enter you by itself."; return; }
+      var draft = null;
       fetch(API + "/v1/voice/resume/redeem", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", authorization: "Bearer " + session },
         body: JSON.stringify({ token: token })
       }).then(function (res) { return res.json().then(function (body) { return { ok: res.ok, body: body }; }); })
         .then(function (r) {
@@ -34,24 +38,41 @@
             var why = r.body && r.body.error;
             status.textContent = why === "resume_used" ? "This link was already used."
               : why === "resume_expired" ? "This link has expired. Call Josie again and ask for a new one."
+              : why === "sign_in_required" ? "Sign in to the Kinex Entry app. A website chat pass cannot finish a phone entry."
               : "This link can't be used.";
             return;
           }
-          var draft = r.body.draft || {};
+          draft = r.body.draft || {};
+          if (r.body.pass) { status.textContent = "This link can't be used."; return; }
           var rodeo = draft.rodeo || {};
           var klass = draft.klass;
-          try {
-            sessionStorage.setItem("kinexVoiceResume", JSON.stringify(Object.assign({ pass: r.body.pass }, draft)));
-          } catch (e) {}
-          status.textContent = "You're signed in for this entry only, for 20 minutes.";
+          status.textContent = "You're signed in. Nothing is entered until you confirm.";
           detail.hidden = false;
           detail.textContent = (klass && klass.name ? klass.name + " at " : "") + (rodeo.name || "your event")
-            + (rodeo.eventNumber ? " (#" + rodeo.eventNumber + ")" : "")
-            + ". Nothing is entered until you confirm it on the next page.";
+            + (rodeo.eventNumber ? " (#" + rodeo.eventNumber + ")" : "") + ".";
           go.hidden = false;
           history.replaceState(null, "", location.pathname);
         })
         .catch(function () { status.textContent = "I couldn't reach Kinex Entry just now. Try the link again in a minute."; });
+      go.addEventListener("click", function () {
+        if (!draft || !draft.klass) return;
+        go.disabled = true;
+        fetch(API + "/v1/entries", {
+          method: "POST",
+          headers: { "content-type": "application/json", authorization: "Bearer " + session },
+          body: JSON.stringify({
+            classId: draft.klass.id, horseId: draft.horseId || null, preferences: draft.prefs || [],
+            placement: draft.placement || "any", buddyCode: draft.buddyCode || null, sameDay: !!draft.sameDay,
+            partnerUserId: draft.partner ? draft.partner.userId : null, position: draft.position || null
+          })
+        }).then(function (res) { return res.json().then(function (body) { return { ok: res.ok, body: body }; }); })
+          .then(function (r) {
+            if (!r.ok) { status.textContent = "That didn't go through. Nothing new was entered."; go.disabled = false; return; }
+            status.textContent = "You're entered. Confirmation " + ((r.body.entry && r.body.entry.confirmationCode) || "") + ".";
+            go.hidden = true;
+          })
+          .catch(function () { status.textContent = "I couldn't reach Kinex Entry just now."; go.disabled = false; });
+      });
     })();
   </script>
 </body>
