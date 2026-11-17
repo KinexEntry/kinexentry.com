@@ -45,7 +45,8 @@ code { background: var(--ink-3); padding: 1px 6px; border-radius: 6px; font-size
 /* ── header ─────────────────────────────────────────────────────────── */
 .top {
   display: flex; align-items: center; justify-content: space-between; gap: 16px;
-  padding: 18px 0;
+  /* The sides keep the page gutter: "padding: 18px 0" wiped it out and put the logo against the edge of a narrow window. */
+  padding-top: 18px; padding-bottom: 18px;
 }
 .logo { display: inline-flex; align-items: center; gap: 12px; color: var(--cream); }
 .logo:hover { text-decoration: none; }
@@ -119,7 +120,7 @@ footer .fine { margin-top: 24px; font-size: 12.5px; }
   .hero { padding-top: 40px; }
   /* The header on a phone: the logo on its own line, the four pages as a row of
      pills, and the two copper doors side by side under them. */
-  .top { flex-wrap: wrap; row-gap: 14px; padding: 14px 0; }
+  .top { flex-wrap: wrap; row-gap: 14px; padding-top: 14px; padding-bottom: 14px; }
   nav { width: 100%; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
   nav a:not(.navbtn) {
     text-align: center; padding: 9px 4px; border: 1px solid var(--line); border-radius: 10px;
@@ -133,7 +134,6 @@ footer .fine { margin-top: 24px; font-size: 12.5px; }
   }
   nav a.navbtn { grid-column: 1 / 3; }
   nav .navmenu { grid-column: 3 / 5; display: block; }
-  nav .navmenu .menu { left: auto; right: 0; min-width: 100%; }
 }
 
 /* ── photographs ─────────────────────────────────────────────────────── */
@@ -170,13 +170,15 @@ nav a.navbtn {
 }
 nav a.navbtn:hover { color: #fff; filter: brightness(1.08); text-decoration: none; }
 /* Sign In opens a small menu with the two doors. */
-nav .navmenu { position: relative; }
+/* The menu hangs from the whole nav, not from the button: wherever the button
+   lands when the row wraps, the menu stays inside the page. */
+nav { position: relative; }
 nav .navmenu summary { list-style: none; cursor: pointer; font-size: 14px; }
 nav .navmenu summary::-webkit-details-marker { display: none; }
 nav .navmenu summary.navbtn { display: inline-block; padding: 7px 14px; border-radius: 8px; background: var(--copper); color: #fff; font-weight: 700; line-height: 1; }
 nav .navmenu[open] summary.navbtn, nav .navmenu summary.navbtn:hover { filter: brightness(1.08); }
 nav .navmenu .menu {
-  position: absolute; right: 0; top: calc(100% + 8px); z-index: 20; min-width: 300px;
+  position: absolute; right: 0; top: calc(100% + 8px); z-index: 20; width: 300px; max-width: 100%;
   background: #1a1816; border: 1px solid rgba(255,255,255,.1); border-radius: 12px; padding: 6px;
   box-shadow: 0 20px 50px rgba(0,0,0,.5);
 }
@@ -184,7 +186,10 @@ nav .navmenu .menu a { display: flex; flex-direction: column; gap: 3px; padding:
 nav .navmenu .menu a:hover { background: rgba(255,255,255,.06); text-decoration: none; }
 nav .navmenu .menu a strong { font-size: 14px; }
 nav .navmenu .menu a span { font-size: 12.5px; font-weight: 500; color: var(--muted); }
-@media (max-width: 640px) { nav .navmenu .menu { right: auto; left: 0; } }
+/* On a phone it is as wide as the two buttons above it. */
+@media (max-width: 640px) { nav .navmenu .menu { left: 0; right: 0; width: auto; } }
+/* A narrow window that is not yet a phone: pull the links closer so Sign In stays on the row. */
+@media (min-width: 641px) and (max-width: 760px) { nav { column-gap: 12px; } }
 nav { align-items: center; row-gap: 10px; }
 
 /* ── Download Contestant App ─────────────────────────────────────────── */
